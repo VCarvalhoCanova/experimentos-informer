@@ -80,22 +80,7 @@ arquitetura do artigo (`3+1` camadas no encoder, `1/4` de entrada na réplica e 
 decoder), use `e_layers=3`, `n_encoder_stacks=2`, `replica_layers=1`,
 `replica_input_fraction=0.25` e `d_layers=2`.
 
-### 2.1 ETT multivariado no protocolo do artigo
-
-`InformerMultivariateForecaster` estende o wrapper para séries com várias variáveis de entrada
-e saída (`c_in = c_out = n_features`), com normalização por variável, early stopping numa
-validação explícita e a receita do artigo (MSE, Adam `1e-4` caindo pela metade por época, 8
-épocas, batch 32). O módulo `src/experiment/ett_paper.py` monta o experimento da Tabela 2:
-split 12/4/4 meses, horizontes 24/48/168/336/720 (ETTh) e 24/48/96/288/672 (ETTm), avaliação
-rolling com stride 1 e MSE/MAE médios sobre as 7 variáveis. Pesos, modelos ARIMA e métricas
-são cacheados em `data/result/paper_ett/`, então a execução é retomável.
-
-O notebook `informer_vs_arima_paper_ETT.ipynb` expõe esse protocolo e vem com
-`RUN_EXPERIMENT = False`; o ARIMA (7 modelos univariados, não sazonal por padrão) é um
-baseline extra, porque a Tabela 2 não reporta ARIMA. Em CPU o protocolo completo leva muitas
-horas; prefira GPU e reduza `DATASETS_TO_RUN`/`HORIZONS_TO_RUN` para uma primeira execução.
-
-### 2.2 `InformerForecaster` (API no estilo scikit-learn)
+### 2.1 `InformerForecaster` (API no estilo scikit-learn)
 
 O módulo `Informer` é só a rede. Ele não normaliza, não janela, não treina. Essa parte fica no
 wrapper:
@@ -221,8 +206,6 @@ notebook não roda, mesmo que só a parte do Informer seja usada, porque as mét
 
 ```bash
 jupyter notebook notebooks_examples/informer_vs_arima.ipynb
-jupyter notebook notebooks_examples/informer_vs_arima_optimized.ipynb   # busca de hiperparâmetros
-jupyter notebook notebooks_examples/informer_vs_arima_paper_ETT.ipynb    # ETT no protocolo do artigo
 ```
 
 `informer_vs_arima.ipynb` está dividido em: preparação do ambiente → visão geral dos 8
@@ -230,25 +213,6 @@ datasets → sanity check do Informer → protocolo → execução (célula long
 no formato do projeto → métricas normalizadas → gráficos → persistência em `data/result/` →
 discussão. Ele não foi executado neste ambiente (ver seção 8), portanto está salvo **sem
 outputs**.
-
-`informer_vs_arima_paper_ETT.ipynb` reproduz o ETT multivariado do artigo (7 → 7, split
-12/4/4 meses, horizontes de 24 a 720, stride 1) com a rede de `d_model=512` e ~22,8 milhões de
-parâmetros. Ele só constrói o modelo até a célula de execução: `RUN_EXPERIMENT` começa em
-`False` e deve ser ligado conscientemente (o protocolo completo são 20 treinos). O ARIMA é
-avaliado por variável como baseline extra, com `ARIMA_SEASONAL_PERIOD = None` (não sazonal);
-use `24` para sazonalidade diária no ETTh, ciente do custo. Cache e retomada ficam em
-`data/result/paper_ett/` e `paper.clear_cache(...)` apaga um recorte.
-
-`informer_vs_arima_optimized.ipynb` mantém o mesmo protocolo e acrescenta uma busca aleatória
-de hiperparâmetros (40 trials por dataset, espaço em `SEARCH_SPACE`) sobre a **validação
-cronológica** — o teste só é usado no fim. Ele compara três modelos (`arima`,
-`informer_baseline` e `informer_opt`), grava o log de todos os trials em
-`data/result/informer_tuning_trials.csv` (retomável) e as configurações vencedoras em
-`data/result/informer_best_configs.json`. Requer a versão de `benchmark.py` com `params`/
-`informer_params`; a primeira célula de código verifica isso e falha com mensagem explícita
-caso contrário. A busca completa leva **horas** em CPU (`TIME_BUDGET_PER_DATASET` corta em
-25 min por dataset); para um teste rápido, use `SEARCH_TRIALS=3` e
-`DATASETS_TO_TUNE=["temperature.txt"]`.
 
 ### 5.3 Linha de comando
 
