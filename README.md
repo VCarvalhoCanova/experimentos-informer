@@ -306,59 +306,10 @@ além da tabela bruta.
 
 O objetivo é a **demonstração do comportamento**, não um benchmark publicado.
 
----
-
-## 8. Validação realizada
-
-O que foi verificado neste ambiente:
-
-* `src/model/informer.py`: forward com e sem distilling, múltiplos stacks e máscara causal
-  (`Informer(...)` devolve `(B, pred_len, 1)` em todos os casos testados);
-* `InformerForecaster.fit` + `rolling_forecast` em série sintética (seno + ruído) e em série
-  real (`temperature.txt`), com `time_exec` preenchido e previsão de mesmo comprimento do
-  teste;
-* `src/experiment/benchmark.py`: carga das 8 séries, splits, horizontes efetivos,
-  `run_comparison` (com o ARIMA substituído por um *stub* de persistência, porque `pmdarima`
-  não está instalado aqui), tabela de métricas, `comparison_table` e as três funções de
-  plotagem;
-* notebook: todas as células de código passam por `ast.parse` e o JSON é válido;
-* `benchmark.run_informer(params=...)`: `params=None` devolve previsão idêntica à do default
-  (verificado com `np.allclose`), `params` aplicados mudam a previsão, `pred_len` em `params`
-  é ignorado e chave desconhecida levanta `KeyError`; `run_comparison(informer_params=...)`
-  produz o mesmo layout de tabela;
-* `informer_vs_arima_optimized.ipynb`: executado de ponta a ponta neste ambiente
-  (`venv310`) com orçamento mínimo — 1 dataset, 2 trials, 1 época — incluindo o ARIMA real,
-  a geração dos quatro arquivos de saída e as funções de plotagem;
-* `setup.py`: `config.ROOT_PATH` passa a resolver a raiz do projeto e os caminhos de
-  `benchmark` coincidem com `config.RAW_DATA_PATH` / `config.MODEL_DATA_PATH`.
-
-O que **não** foi executado: a busca completa do notebook otimizado (40 trials × 8 datasets,
-horas de CPU) e o notebook `informer_vs_arima.ipynb` de ponta a ponta. Use o interpretador do
-ambiente com as dependências instaladas (aqui, `venv310/bin/python`; o `python` do PATH pode
-ser outro e não ter `torch`) e rode `pip install -r requirements.txt`; se `pmdarima` falhar ao
-importar por causa de `numpy 2.x`, use `numpy<2` em um ambiente virtual.
-
-### Caminhos: `setup.py` e `src/config.py`
-
-Com o `setup.py` na raiz, `config.encontrar_raiz_projeto()` resolve `config.ROOT_PATH`
-corretamente e `config.RAW_DATA_PATH` / `config.MODEL_DATA_PATH` apontam para `data/raw/` e
-`data/result/`.
-
-Os arquivos novos **não importam `config`**: `src/experiment/benchmark.py` resolve a raiz a
-partir do próprio arquivo (`Path(__file__).resolve().parents[2]`), chegando exatamente nos
-mesmos diretórios (verificado: `benchmark.RAW_DATA_PATH == Path(config.RAW_DATA_PATH)` e o mesmo
-para `RESULT_PATH`). Isso mantém o benchmark independente de instalação/`sys.path` e evita
-acoplar o experimento ao `config.BASE_INFORMATION`, que não conhece os arquivos ETT.
-
-Se a intenção for usar `pip install -e .` para importar os módulos, atenção: hoje
-`find_packages(where='src')` retorna `[]`, porque `src/model`, `src/input`, `src/metrics` e
-`src/experiment` não têm `__init__.py`; além disso `src/config.py` é um módulo de topo, não um
-pacote. O projeto funciona porque os notebooks/CLI inserem `src/` no `sys.path` — exatamente o
-que os notebooks antigos já fazem para `import config` e `from metrics import metrics`.
 
 ---
 
-## 9. Referências
+## 8. Referências
 
 * Zhou, H., Zhang, S., Peng, J., Zhang, S., Li, J., Xiong, H., Zhang, W. *Informer: Beyond
   Efficient Transformer for Long Sequence Time-Series Forecasting*. AAAI 2021.
